@@ -55,7 +55,7 @@ let plugin_registry = dyn_rt::registry::PluginRegistryBuilder::new()
 ```Rust
 // Calling
 let plugin_registry = dyn_rt::registry::PluginRegistryBuilder::new()
-    .add_library(get_plugin_binary_path("dyn_rt_modules"))
+    .add_library("dyn_rt_modules.dll")
     .build();
 
 let descriptor_result = plugin_registry.func_descriptor("dyn-rt-modules", "sum");
