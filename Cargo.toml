@@ -1,0 +1,3 @@
+[workspace]
+resolver = "2"
+members = ["dyn-rt", "dyn-rt-macros", "dyn-rt-modules", "dyn-rt-tests", "dyn-rt-utils"]

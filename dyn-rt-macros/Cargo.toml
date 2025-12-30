@@ -1,0 +1,12 @@
+[package]
+name = "dyn-rt-macros"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+dyn-rt-utils = { path = "../dyn-rt-utils" }
+quote = "1.0.42"
+syn = { version = "2.0.111", features = ["full"] }

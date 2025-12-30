@@ -1,0 +1,10 @@
+[package]
+name = "dyn-rt-modules"
+version = "0.2.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+dyn-rt = { path = "../dyn-rt" }

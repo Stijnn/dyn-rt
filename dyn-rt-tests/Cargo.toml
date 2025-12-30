@@ -1,0 +1,12 @@
+[package]
+name = "dyn-rt-tests"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dyn-rt = { path = "../dyn-rt" }
+
+[dev-dependencies]
+dyn-rt-modules = { path = "../dyn-rt-modules" }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.148"
