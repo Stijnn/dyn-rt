@@ -227,4 +227,17 @@ mod tests {
 
         let _ = plugin_registry.invoke_function::<()>("dyn-rt-modules", "create_a_new_registry", json!({}));
     }
+
+    #[test]
+    fn retrieve_func_descriptor_should_work() {
+        let plugin_registry = dyn_rt::registry::PluginRegistryBuilder::new()
+            .add_library(get_plugin_binary_path("dyn_rt_modules"))
+            .build();
+
+        let descriptor_result = plugin_registry.func_descriptor("dyn-rt-modules", "sum");
+        assert!(descriptor_result.is_ok(), "sum function exists and thus should return a valid descriptor");
+
+        let descriptor = descriptor_result.unwrap();
+        println!("{:?}", descriptor);
+    }
 }

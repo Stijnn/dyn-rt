@@ -3,6 +3,8 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use dyn_rt_utils::PLUGIN_DECL_APPENDIX;
 use serde_json::json;
 
+use crate::FnDescriptor;
+
 pub struct PluginRegistry {
     plugins: HashMap<String, Arc<crate::attach::AttachedPlugin>>,
 }
@@ -30,6 +32,17 @@ impl PluginRegistry {
         self.plugins.clone()
     }
 
+    pub fn func_descriptor(&self, lib_name: impl std::fmt::Display, fn_name: impl std::fmt::Display) -> Result<FnDescriptor, String> {
+        let name_str = lib_name.to_string();
+        let loaded_library = self
+            .plugins
+            .get(&name_str)
+            .ok_or_else(|| format!("Library {} not found", name_str))?;
+
+        let unmangled_wrapper_name = format!("{}{}", PLUGIN_DECL_APPENDIX, fn_name);
+        PluginRegistry::call::<crate::FnDescriptor>(loaded_library, format!("__impl_fd_schematic_{}", unmangled_wrapper_name), json!({}))
+    }
+
     pub fn invoke_function<T: serde::de::DeserializeOwned>(
         &self,
         lib_name: impl std::fmt::Display,
@@ -43,8 +56,6 @@ impl PluginRegistry {
             .ok_or_else(|| format!("Library {} not found", name_str))?;
 
         let unmangled_wrapper_name = format!("{}{}", PLUGIN_DECL_APPENDIX, fn_name);
-        let fnd = PluginRegistry::call::<crate::FnDescriptor>(loaded_library, format!("__impl_fd_schematic_{}", unmangled_wrapper_name), json!({}));
-        println!("{:?}", fnd.unwrap());
         PluginRegistry::call::<T>(loaded_library, unmangled_wrapper_name, args)
     }
 
