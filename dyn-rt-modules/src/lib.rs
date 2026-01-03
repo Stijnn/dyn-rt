@@ -1,10 +1,22 @@
 use dyn_rt::{
-    registry::{PluginRegistryBuilder},
-    serde_json,
+    registry::PluginRegistryBuilder, serde_json, utils::{Plugin, PluginBuilder}
 };
 
-#[dyn_rt::macros::plugin()]
-pub fn dllmain() {}
+#[dyn_rt::macros::plugin]
+pub fn plugin_entry_point() -> Plugin {
+    PluginBuilder::new()
+        .set_name("dyn_rt_modules".into())
+        .set_description("Test Description".into())
+        .add_commands(vec![
+            "sum".into(),
+            "to_json_pretty".into(),
+            "from_json_string".into(),
+            "massive_vec_sort".into(),
+            "create_a_new_registry".into(),
+        ])
+        .set_version("1.0.0".into())
+        .build()
+}
 
 #[dyn_rt::macros::command]
 pub fn sum(a: i32, b: i32) -> Result<i32, i32> {

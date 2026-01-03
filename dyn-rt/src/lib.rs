@@ -1,6 +1,7 @@
 pub mod macros {
     pub use dyn_rt_macros::plugin as plugin;
     pub use dyn_rt_macros::command;
+    pub use dyn_rt_macros::expose;
 }
 
 pub mod attach;
@@ -17,16 +18,20 @@ pub struct WrappedResult<T> {
     pub error: Option<String>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct FnDescriptor {
-    function_name: String,
-    parameters: Vec<FnParameterDescriptor>,
-    return_type: String
+    pub function_name: String,
+    pub parameters: Vec<FnParameterDescriptor>,
+    pub return_type: String
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct FnParameterDescriptor {
-    name: String,
-    #[serde(alias = "type")]
-    dtype: String,
+    pub name: String,
+    pub dtype: String,
+}
+
+#[deprecated]
+pub trait DescriptableFn {
+    fn get_function_descriptor(&self) -> FnDescriptor;
 }

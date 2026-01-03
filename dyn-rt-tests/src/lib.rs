@@ -81,7 +81,7 @@ mod tests {
             .build();
 
         let res = plugin_registry.invoke_function::<Result<i32, i32>>(
-            "dyn-rt-modules",
+            "dyn_rt_modules",
             "sum",
             json!({
                 "a": 1i32,
@@ -112,7 +112,7 @@ mod tests {
             .build();
 
         let res = plugin_registry.invoke_function::<String>(
-            "dyn-rt-modules",
+            "dyn_rt_modules",
             "to_json_pretty",
             json!({
                 "input": {
@@ -158,7 +158,7 @@ mod tests {
         .unwrap();
 
         let res = plugin_registry.invoke_function::<SerializeTest>(
-            "dyn-rt-modules",
+            "dyn_rt_modules",
             "from_json_string",
             json!({
                 "input": input
@@ -203,7 +203,7 @@ mod tests {
             .build();
 
         let r = plugin_registry.invoke_function::<Vec<i32>>(
-            "dyn-rt-modules",
+            "dyn_rt_modules",
             "massive_vec_sort",
             json!({
                 "input": input_will_be
@@ -225,7 +225,7 @@ mod tests {
             .add_library(get_plugin_binary_path("dyn_rt_modules"))
             .build();
 
-        let _ = plugin_registry.invoke_function::<()>("dyn-rt-modules", "create_a_new_registry", json!({}));
+        let _ = plugin_registry.invoke_function::<()>("dyn_rt_modules", "create_a_new_registry", json!({}));
     }
 
     #[test]
@@ -234,10 +234,14 @@ mod tests {
             .add_library(get_plugin_binary_path("dyn_rt_modules"))
             .build();
 
-        let descriptor_result = plugin_registry.func_descriptor("dyn-rt-modules", "sum");
-        assert!(descriptor_result.is_ok(), "sum function exists and thus should return a valid descriptor");
+        let plugin = plugin_registry.get_plugin("dyn_rt_modules");
+        assert!(plugin.is_some(), "Should be some");
 
-        let descriptor = descriptor_result.unwrap();
+        let plugin = plugin.unwrap();
+        let descriptor = plugin.func_descriptor("sum");
+        assert!(descriptor.is_ok(), "Should have sum function descriptor");
+
+        let descriptor = descriptor.unwrap();
         println!("{:?}", descriptor);
     }
 }

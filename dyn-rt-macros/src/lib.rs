@@ -3,26 +3,33 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{FnArg, ItemFn, Pat, parse_macro_input};
 
+#[proc_macro]
+pub fn expose(input: TokenStream) -> TokenStream {
+    let fn_ident = parse_macro_input!(input as syn::Ident);
+    let struct_ident = format_ident!("_Args_{}", fn_ident);
+
+    let out = quote! {
+        #struct_ident {}
+    };
+
+    out.into()
+}
+
 #[proc_macro_attribute]
 pub fn plugin(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
     let fn_name = &input_fn.sig.ident;
 
-    let name = std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| fn_name.to_string());
-    let description = "No description provided".to_string();
+    // let name = std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| fn_name.to_string());
+    // let description = "No description provided".to_string();
 
     let out = quote! {
         #input_fn
 
         #[unsafe(no_mangle)]
         pub extern "C" fn _impl_attach_dyn_plugin() -> dyn_rt::utils::Plugin {
-            #fn_name();
-
-            dyn_rt::utils::Plugin::new(
-                concat!(#name, "\0"),
-                concat!(#description, "\0"),
-                concat!(env!("CARGO_PKG_VERSION"), "\0")
-            )
+            let returns: dyn_rt::utils::Plugin = #fn_name();
+            returns
         }
 
         #[unsafe(no_mangle)]
@@ -93,27 +100,26 @@ pub fn command(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
         #[unsafe(no_mangle)]
         pub extern "C" fn #original_function_descriptor_fn_ident() -> *const ::std::os::raw::c_char {
-            let details = ::dyn_rt::serde_json::json!({
-                "function_name": stringify!(#fn_name),
-                "parameters": [
-                    #(
-                        {
-                            "name": #field_names,
-                            "type": #field_types
-                        }
-                    ),*
-                ],
-                "return_type": #return_type_str
-            });
+            let details = 
+                ::dyn_rt::FnDescriptor {
+                    function_name: stringify!(#fn_name).into(),
+                    parameters: vec![
+                        #(
+                            ::dyn_rt::FnParameterDescriptor {
+                                name: #field_names.into(),
+                                dtype: #field_types.into()
+                            }
+                        ),*
+                    ],
+                    return_type: #return_type_str.into()
+                };
 
             let wrapped = ::dyn_rt::WrappedResult {
                 data: Some(details),
                 error: None
             };
-
             let json_string = ::dyn_rt::serde_json::to_string(&wrapped).unwrap_or_else(|_| "{\"error\": \"Serialization failed\"}".into());
             let c_result = ::std::ffi::CString::new(json_string).unwrap();
-            
             c_result.into_raw()
         }
 
