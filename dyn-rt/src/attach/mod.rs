@@ -1,8 +1,30 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, io::Read, path::PathBuf, sync::Arc};
 
 use dyn_rt_utils::{PLUGIN_ENTRY_POINT_DECL, Plugin};
 
 use crate::FnDescriptor;
+
+pub fn create_blake3_hash_for_file(file: &PathBuf) -> Result<String, String> {
+    let f =
+        std::fs::File::open(file).map_err(|e| format!("Error creating hash for {file:?}: {e}"))?;
+
+    let mut reader = std::io::BufReader::new(f);
+    let mut hasher = blake3::Hasher::new();
+    let mut buffer = [0; 8192];
+
+    loop {
+        let count = reader
+            .read(&mut buffer)
+            .map_err(|e| format!("Error reading file into buffer: {e}"))?;
+
+        if count == 0 {
+            break;
+        }
+        hasher.update(&buffer[..count]);
+    }
+
+    Ok(hasher.finalize().to_string())
+}
 
 #[derive(Debug)]
 pub struct AttachedPlugin {
@@ -11,6 +33,8 @@ pub struct AttachedPlugin {
     pub cargo_version: String,
     pub functions: HashMap<String, FnDescriptor>,
     pub library: Arc<libloading::Library>,
+    pub location: String,
+    pub blake3_hash: String,
 }
 
 /// Attempts to attach a dynamic-link-library to the host process using [`libloading`].
@@ -24,11 +48,8 @@ pub struct AttachedPlugin {
 pub fn attach_library(filename: &PathBuf) -> Result<AttachedPlugin, String> {
     let lib = unsafe { libloading::Library::new(filename) };
 
-    if lib.is_err() {
-        let ef = format!(
-            "Failed to load plugin. Libloading threw an error: {}",
-            lib.unwrap_err()
-        );
+    if let Err(lib_e) = lib {
+        let ef = format!("Failed to load plugin. Libloading threw an error: {lib_e}");
         eprintln!("{ef}");
         return Err(ef);
     }
@@ -37,11 +58,18 @@ pub fn attach_library(filename: &PathBuf) -> Result<AttachedPlugin, String> {
     let plugin_attach_fn =
         unsafe { lib.get::<crate::utils::PluginRegistrationFn>(PLUGIN_ENTRY_POINT_DECL) };
 
-    if plugin_attach_fn.is_err() {
+    if let Err(attach_e) = plugin_attach_fn {
         let ef = format!(
-            "Failed to load plugin. Could not find: _impl_attach_dyn_plugin. Error: {}",
-            plugin_attach_fn.unwrap_err()
+            "Failed to load plugin. Could not find: _impl_attach_dyn_plugin. Error: {attach_e}"
         );
+        eprintln!("{ef}");
+        let _ = lib.close();
+        return Err(ef);
+    }
+
+    let plugin_hash = create_blake3_hash_for_file(filename);
+    if let Err(hash_e) = plugin_hash {
+        let ef = format!("Failed to hash plugin. Error: {hash_e}");
         eprintln!("{ef}");
         let _ = lib.close();
         return Err(ef);
@@ -50,11 +78,21 @@ pub fn attach_library(filename: &PathBuf) -> Result<AttachedPlugin, String> {
     let plugin_attach_fn = plugin_attach_fn.unwrap();
     let plugin = plugin_attach_fn();
 
-    Ok(AttachedPlugin::from(plugin, lib))
+    Ok(AttachedPlugin::from(
+        plugin,
+        filename.to_str().unwrap().to_string(),
+        lib,
+        plugin_hash.unwrap(),
+    ))
 }
 
 impl AttachedPlugin {
-    pub fn from(value: Plugin, lib: libloading::Library) -> Self {
+    pub fn from(
+        value: Plugin,
+        file_location: String,
+        lib: libloading::Library,
+        file_hash: String,
+    ) -> Self {
         let name = unsafe {
             std::ffi::CStr::from_ptr(value.name)
                 .to_string_lossy()
@@ -87,11 +125,17 @@ impl AttachedPlugin {
                 .filter(|f| !f.is_empty()) // Prevent empty strings from being processed
                 .map(|f| {
                     let name = Self::create_fn_impl_name(f.to_string());
-                    let call_result = Self::impl_call::<FnDescriptor>(&lib_arc, name.clone(), serde_json::json!({}));
+                    let call_result = Self::impl_call::<FnDescriptor>(
+                        &lib_arc,
+                        name.clone(),
+                        serde_json::json!({}),
+                    );
                     (name, call_result)
                 })
                 .filter_map(|(name, res)| res.ok().map(|val| (name, val))) // Filters and unwraps in one step
                 .collect::<HashMap<String, FnDescriptor>>(),
+            location: file_location,
+            blake3_hash: file_hash,
         }
     }
 
@@ -139,9 +183,7 @@ impl AttachedPlugin {
             let res_cstr = CStr::from_ptr(raw_res_ptr);
             let res_json = res_cstr.to_string_lossy().into_owned();
 
-            match lib
-                .get::<unsafe extern "C" fn(*mut c_char)>(b"_dyn_rt_free_string")
-            {
+            match lib.get::<unsafe extern "C" fn(*mut c_char)>(b"_dyn_rt_free_string") {
                 Ok(f) => f(raw_res_ptr),
                 Err(_) => {
                     eprintln!(

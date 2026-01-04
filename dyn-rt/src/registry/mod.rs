@@ -15,6 +15,10 @@ impl PluginRegistry {
         }
     }
 
+    pub fn add_plugin(&mut self, plugin: Arc<crate::attach::AttachedPlugin>) {
+        self.plugins.insert(plugin.name.clone(), plugin);
+    }
+
     pub fn unload_plugin(&mut self, name: &str) {
         self.plugins.retain(|k, _v| k != name);
     }
@@ -32,9 +36,7 @@ impl PluginRegistry {
     }
 
     pub fn get_plugin(&self, plugin_name: &str) -> Option<Arc<AttachedPlugin>> {
-        self.get_plugins_map()
-            .get(plugin_name)
-            .map(|result| Arc::clone(result))
+        self.get_plugins_map().get(plugin_name).map(Arc::clone)
     }
 
     pub fn invoke_function<T: serde::de::DeserializeOwned>(
