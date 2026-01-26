@@ -244,4 +244,18 @@ mod tests {
         let descriptor = descriptor.unwrap();
         println!("{:?}", descriptor);
     }
+
+    #[test]
+    fn run_async_fn() {
+        let plugin_registry = dyn_rt::registry::PluginRegistryBuilder::new()
+            .add_library(get_plugin_binary_path("dyn_rt_modules"))
+            .build();
+
+        let plugin = plugin_registry.get_plugin("dyn-rt-modules");
+        assert!(plugin.is_some(), "Should be some");
+
+        let _ = plugin_registry.invoke_function::<()>("dyn-rt-modules", "async_test_delay", json!({
+            "ms": 10000
+        }));
+    }
 }

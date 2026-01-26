@@ -8,3 +8,4 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 dyn-rt = { path = "../dyn-rt" }
+tokio = { version = "1.49.0", features = ["time"] }

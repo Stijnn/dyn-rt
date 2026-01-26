@@ -1,22 +1,21 @@
 use dyn_rt::{
-    registry::PluginRegistryBuilder,
-    serde_json,
-    utils::{Plugin, PluginBuilder},
+    expose, registry::PluginRegistryBuilder, serde_json, tokio, utils::{Plugin, PluginBuilder}
 };
 
 #[dyn_rt::macros::plugin]
 pub fn plugin_entry_point() -> Plugin {
     PluginBuilder::new()
-        .set_name("dyn-rt-modules".into())
-        .set_description("This is a testing module for [`dyn-rt`]".into())
-        .add_commands(dyn_rt::expose![
-            "create_a_new_registry".into(),
-            "sum".into(),
-            "to_json_pretty".into(),
-            "from_json_string".into(),
-            "massive_vec_sort".into(),
+        .set_name("dyn-rt-modules")
+        .set_description("This is a testing module for [`dyn-rt`]")
+        .add_commands(expose![
+            create_a_new_registry,
+            sum,
+            to_json_pretty,
+            from_json_string,
+            massive_vec_sort,
+            async_test_delay
         ])
-        .set_version("1.0.0".into())
+        .set_version("1.0.0")
         .build()
 }
 
@@ -48,4 +47,12 @@ pub fn create_a_new_registry() {
         .add_library(std::path::PathBuf::from("dyn_rt_modules.dll"))
         .build();
     println!("{:?}", linker.get_plugins_vec());
+}
+
+#[dyn_rt::macros::command]
+async fn async_test_delay(ms: u64) -> String {
+    println!("Rust: Starting async sleep for {}ms...", ms);
+    tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
+    println!("Rust: Sleep finished!");
+    format!("Async task completed after {}ms", ms)
 }
