@@ -36,3 +36,9 @@ pub trait DescriptableFn {
     fn get_function_descriptor(&self) -> FnDescriptor;
 }
 
+#[macro_export]
+macro_rules! expose {
+    ($($cmd:ident),* $(,)?) => {
+        vec![$(stringify!($cmd).to_string()),*]
+    };
+}

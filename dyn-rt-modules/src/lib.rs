@@ -9,7 +9,7 @@ pub fn plugin_entry_point() -> Plugin {
     PluginBuilder::new()
         .set_name("dyn-rt-modules".into())
         .set_description("This is a testing module for [`dyn-rt`]".into())
-        .add_commands(vec![
+        .add_commands(dyn_rt::expose![
             "create_a_new_registry".into(),
             "sum".into(),
             "to_json_pretty".into(),

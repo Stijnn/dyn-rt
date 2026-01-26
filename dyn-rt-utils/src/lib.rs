@@ -37,8 +37,8 @@ impl PluginBuilder {
         Self { name: "".into(), description: "".into(), functions: vec![], version: "".into() }
     }
 
-    pub fn add_command(&mut self, function: String) -> &mut Self {
-        self.functions.push(function);
+    pub fn add_command(&mut self, function: impl Into<String>) -> &mut Self {
+        self.functions.push(function.into());
         self
     }
 
@@ -47,18 +47,18 @@ impl PluginBuilder {
         self
     }
 
-    pub fn set_name(&mut self, name: String) -> &mut Self {
-        self.name = name;
+    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
+        self.name = name.into();
         self
     }
 
-    pub fn set_description(&mut self, description: String) -> &mut Self {
-        self.description = description;
+    pub fn set_description(&mut self, description: impl Into<String>) -> &mut Self {
+        self.description = description.into();
         self
     }
 
-    pub fn set_version(&mut self, version: String) -> &mut Self {
-        self.version = version;
+    pub fn set_version(&mut self, version: impl Into<String>) -> &mut Self {
+        self.version = version.into();
         self
     }
 
