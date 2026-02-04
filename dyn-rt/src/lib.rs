@@ -1,6 +1,7 @@
 pub mod macros {
     pub use dyn_rt_macros::command;
     pub use dyn_rt_macros::plugin;
+    pub use dyn_rt_macros::reflect;
 }
 
 pub mod attach;
@@ -8,6 +9,7 @@ pub mod registry;
 
 use std::sync::OnceLock;
 
+pub use schemars;
 pub use tokio;
 pub use dyn_rt_utils as utils;
 pub use serde;
@@ -34,6 +36,7 @@ pub struct FnDescriptor {
     pub function_name: String,
     pub parameters: Vec<FnParameterDescriptor>,
     pub return_type: String,
+    pub schema: schemars::Schema
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]

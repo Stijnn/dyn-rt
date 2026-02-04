@@ -1,7 +1,7 @@
 use dyn_rt_utils::PLUGIN_DECL_APPENDIX;
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{FnArg, ItemFn, Pat, parse_macro_input};
+use syn::{FnArg, ItemFn, ItemStruct, Pat, parse_macro_input};
 
 #[proc_macro_attribute]
 pub fn plugin(_attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -40,6 +40,17 @@ pub fn plugin(_attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(out)
+}
+
+#[proc_macro_attribute]
+pub fn reflect(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as ItemStruct);
+    
+    quote! {
+        #[derive(::dyn_rt::schemars::JsonSchema)]
+        #[schemars(crate = "::dyn_rt::schemars")]
+        #input
+    }.into()
 }
 
 #[proc_macro_attribute]
@@ -108,8 +119,9 @@ pub fn command(_attr: TokenStream, item: TokenStream) -> TokenStream {
         /// 
         /// This struct is automatically generated to mirror the function signature
         /// and implements `Deserialize` to bridge the JSON-FFI boundary.
-        #[derive(::dyn_rt::serde::Deserialize)]
+        #[derive(::dyn_rt::serde::Deserialize, ::dyn_rt::schemars::JsonSchema)]
         #[serde(crate = "::dyn_rt::serde")]
+        #[schemars(crate = "::dyn_rt::schemars")]
         #[allow(non_camel_case_types)]
         struct #args_struct_ident {
             #(#struct_fields),*
@@ -120,7 +132,6 @@ pub fn command(_attr: TokenStream, item: TokenStream) -> TokenStream {
         /// Discovered by the host to understand the function's name, parameters,
         /// and return types without needing the original source code or a shared ABI.
         /// Returns a leaked JSON string; cleanup via `_dyn_rt_free_string` is required.
-        #[allow(clippy::all)]
         #[allow(clippy::all)]
         #[unsafe(no_mangle)]
         pub extern "C" fn #original_function_descriptor_fn_ident() -> *const ::std::os::raw::c_char {
@@ -135,7 +146,8 @@ pub fn command(_attr: TokenStream, item: TokenStream) -> TokenStream {
                             }
                         ),*
                     ],
-                    return_type: #return_type_str.into()
+                    return_type: #return_type_str.into(),
+                    schema: ::dyn_rt::schemars::schema_for!(#args_struct_ident)
                 };
 
             let wrapped = ::dyn_rt::WrappedResult {
